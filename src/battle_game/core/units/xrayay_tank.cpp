@@ -83,6 +83,7 @@ void XrayayTank::Update() {
   TankMove(3.0f, glm::radians(180.0f));
   TurretRotate();
   Fire();
+  Skill();
 }
 
 void XrayayTank::TankMove(float move_speed, float rotate_angular_speed) {
@@ -136,10 +137,26 @@ void XrayayTank::Fire() {
     if (player) {
       auto &input_data = player->GetInputData();
       if (input_data.mouse_button_down[GLFW_MOUSE_BUTTON_LEFT]) {
-        auto velocity = Rotate(glm::vec2{0.0f, 20.0f}, turret_rotation_);
-        GenerateBullet<bullet::CannonBall>(
-            position_ + Rotate({0.0f, 1.2f}, turret_rotation_),
-            turret_rotation_, GetDamageScale(), velocity);
+        if (skill_duration_ > 0.0f) {
+          // 技能激活期间同时发射前后两个方向的子弹
+          auto front_velocity = Rotate(glm::vec2{0.0f, 20.0f}, turret_rotation_);
+          auto back_velocity = Rotate(glm::vec2{0.0f, -20.0f}, turret_rotation_);
+          GenerateBullet<bullet::CannonBall>(
+              position_ + Rotate(glm::vec2{0.0f, 1.2f}, turret_rotation_),
+              turret_rotation_, GetDamageScale(), front_velocity);
+          GenerateBullet<bullet::CannonBall>(
+              position_ + Rotate(glm::vec2{0.0f, -1.2f}, turret_rotation_),
+              turret_rotation_, GetDamageScale(), back_velocity);
+        } else {
+          // 正常情况下随机选择前后两个方向的子弹
+          bool front = std::rand() % 2 == 0;
+          auto barrel_offset = front ? glm::vec2(0.0f, 1.2f) : glm::vec2(0.0f, -1.2f);
+          auto velocity = front ? Rotate(glm::vec2{0.0f, 20.0f}, turret_rotation_)
+                                : Rotate(glm::vec2{0.0f, -20.0f}, turret_rotation_);
+          GenerateBullet<bullet::CannonBall>(
+              position_ + Rotate(barrel_offset, turret_rotation_),
+              turret_rotation_, GetDamageScale(), velocity);
+        }
         fire_count_down_ = kTickPerSecond;  // Fire interval 1 second.
       }
     }
@@ -149,11 +166,16 @@ void XrayayTank::Fire() {
   }
 }
 
+
 void XrayayTank::Skill() {
     if (skill_count_down_ <= 0.0f) {
-        // 激活技能
-        // 例如：增加速度、发射特殊子弹等
+        skill_duration_ = 5.0f;  // 设置技能持续时间
         skill_count_down_ = 10.0f;  // 设置冷却时间
+    } else {
+        skill_count_down_ -= kSecondPerTick;
+        if (skill_duration_ > 0.0f) {
+            skill_duration_ -= kSecondPerTick;
+        }
     }
 }
 

@@ -21,6 +21,7 @@ class XrayayTank : public Unit {
   uint32_t mine_count_down_{0};
 
   float skill_count_down_{0.0f};
+  float skill_duration_{0.0f};
   void Skill();
 };
 }  // namespace battle_game::unit
